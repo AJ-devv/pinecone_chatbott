@@ -1,4 +1,3 @@
-
 import { Message } from 'ai';
 import { getContext } from '@/utils/context';
 import { openai } from '@ai-sdk/openai';
@@ -12,7 +11,6 @@ export async function POST(req: Request) {
 
     const lastMessage = messages[messages.length - 1];
 
-    // 🧠 Step: Pull context from Pinecone
     const context = await getContext(lastMessage.content, '');
 
     const prompt = [
@@ -29,17 +27,18 @@ ${context}
 END OF CONTEXT BLOCK
 AI assistant will take into account any CONTEXT BLOCK that is provided in a conversation.
 If the context does not provide the answer to question, the AI assistant will say, "I'm sorry, but I don't know the answer to that question."
+AI assistant will not apologize for previous responses, but instead will indicate new information was gained.
 AI assistant will not invent anything that is not drawn directly from the context.`,
       },
     ];
 
-const response = await streamText({
-  model: openai("gpt-4o", {
-    apiKey: process.env.OPENAI_API_KEY!,
-  }),
-  messages: [...prompt, ...messages.filter((message: Message) => message.role === 'user')],
-});
-
+    const response = await streamText({
+      model: openai({
+        model: 'gpt-4o',
+        apiKey: process.env.OPENAI_API_KEY!,
+      }),
+      messages: [...prompt, ...messages.filter((message: Message) => message.role === 'user')],
+    });
 
     return response.toAIStreamResponse();
   } catch (e) {
