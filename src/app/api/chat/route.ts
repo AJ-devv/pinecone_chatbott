@@ -10,7 +10,6 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
     const lastMessage = messages[messages.length - 1];
 
-    // Pull context from Pinecone
     const context = await getContext(lastMessage.content, '');
 
     const prompt = [
@@ -31,14 +30,14 @@ AI assistant will not invent anything that is not drawn directly from the contex
       },
     ];
 
-    const result = await streamText({
+    const response = await streamText({
       model: openai('gpt-4o'),
       messages: [...prompt, ...messages.filter((m: Message) => m.role === 'user')],
     });
 
-    return result.toAIStreamResponse();
+    return response.toAIStreamResponse();
   } catch (error) {
-    console.error('API /chat error:', error);
+    console.error('Error in /api/chat route:', error);
     return new Response('Internal Server Error', { status: 500 });
   }
 }
