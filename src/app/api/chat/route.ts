@@ -8,7 +8,6 @@ export const runtime = 'edge';
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
-
     const lastMessage = messages[messages.length - 1];
 
     const context = await getContext(lastMessage.content, '');
@@ -34,15 +33,18 @@ AI assistant will not invent anything that is not drawn directly from the contex
 
     const response = await streamText({
       model: openai({
-        model: 'gpt-4o',
+        model: "gpt-4o",
         apiKey: process.env.OPENAI_API_KEY!,
       }),
-      messages: [...prompt, ...messages.filter((message: Message) => message.role === 'user')],
+      messages: [
+        ...prompt,
+        ...messages.filter((message: Message) => message.role === 'user'),
+      ],
     });
 
     return response.toAIStreamResponse();
   } catch (e) {
-    console.error('Error in /api/chat route:', e);
-    return new Response('Internal Server Error', { status: 500 });
+    console.error("Error in /api/chat route:", e);
+    return new Response("Internal Server Error", { status: 500 });
   }
 }
