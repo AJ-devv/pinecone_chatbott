@@ -33,15 +33,14 @@ AI assistant will not invent anything that is not drawn directly from the contex
       },
     ];
 
-    const response = await streamText({
-      model: openai('gpt-4o', {
-        apiKey: process.env.OPENAI_API_KEY!,
-      }),
-      messages: [
-        ...prompt,
-        ...messages.filter((m: Message) => m.role === 'user'),
-      ],
-    });
+const response = await streamText({
+  model: openai({
+    apiKey: process.env.OPENAI_API_KEY!,
+    model: 'gpt-4o',
+  }),
+  messages: [...prompt, ...messages.filter((message: Message) => message.role === 'user')],
+});
+
 
     return response.toAIStreamResponse();
   } catch (e) {
