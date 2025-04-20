@@ -10,13 +10,14 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
     const lastMessage = messages[messages.length - 1];
 
-    let context = '';
-    try {
-      context = await getContext(lastMessage.content, '');
-    } catch (error) {
-      console.warn('⚠️ Pinecone context fetch failed:', error);
-      context = ''; // fallback gracefully
-    }
+  let context = '';
+try {
+  context = await getContext(lastMessage.content, '', 3000, 0.7, true) as string;
+} catch (error) {
+  console.warn('⚠️ Pinecone context fetch failed:', error);
+  context = '';
+}
+
 
     const prompt = [
       {
