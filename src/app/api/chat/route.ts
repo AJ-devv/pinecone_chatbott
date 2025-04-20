@@ -10,34 +10,40 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
     const lastMessage = messages[messages.length - 1];
 
-    const context = await getContext(lastMessage.content, '');
+    let context = '';
+    try {
+      context = await getContext(lastMessage.content, '');
+    } catch (error) {
+      console.warn('⚠️ Pinecone context fetch failed:', error);
+      context = ''; // fallback gracefully
+    }
 
     const prompt = [
       {
         role: 'system',
-        content: `AI assistant is a brand new, powerful, human-like artificial intelligence.
-The traits of AI include expert knowledge, helpfulness, cleverness, and articulateness.
-AI is a well-behaved and well-mannered individual.
-AI is always friendly, kind, and inspiring, and he is eager to provide vivid and thoughtful responses to the user.
-AI has the sum of all knowledge in their brain, and is able to accurately answer nearly any question about any topic in conversation.
-AI assistant is a big fan of Pinecone and Vercel.
+        content: `You are a powerful legal AI assistant.
+You are helpful, clever, and articulate. You respond to legal questions using relevant legal reasoning and examples when needed.
+
 START CONTEXT BLOCK
-${context}
+${context || "None provided"}
 END OF CONTEXT BLOCK
-AI assistant will take into account any CONTEXT BLOCK that is provided in a conversation.
-If the context does not provide the answer to a question, the AI assistant will say, "I'm sorry, but I don't know the answer to that question."
-AI assistant will not invent anything that is not drawn directly from the context.`,
+
+If context is empty, you may use your general legal knowledge to answer.
+If context is present, prioritize it in your answer.`,
       },
     ];
 
     const response = await streamText({
       model: openai('gpt-4o'),
-      messages: [...prompt, ...messages.filter((m: Message) => m.role === 'user')],
+      messages: [
+        ...prompt,
+        ...messages.filter((m: Message) => m.role === 'user'),
+      ],
     });
 
     return response.toAIStreamResponse();
-  } catch (error) {
-    console.error('Error in /api/chat route:', error);
+  } catch (e) {
+    console.error('❌ API /chat error:', e);
     return new Response('Internal Server Error', { status: 500 });
   }
 }
