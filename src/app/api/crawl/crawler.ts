@@ -18,10 +18,13 @@ class Crawler {
 
     while (this.shouldContinueCrawling()) {
       const { url, depth } = this.queue.shift()!;
+
       if (this.isTooDeep(depth) || this.isAlreadySeen(url)) continue;
 
       this.seen.add(url);
+
       const html = await this.fetchPage(url);
+
       this.pages.push({ url, content: this.parseHtml(html) });
 
       this.addNewUrlsToQueue(this.extractUrls(html, url), depth);
@@ -55,7 +58,7 @@ class Crawler {
       const response = await fetch(url);
       return await response.text();
     } catch (error) {
-      console.error(`Failed to fetch ${url}:`, error);
+      console.error(`Failed to fetch ${url}: ${error}`);
       return '';
     }
   }
@@ -68,7 +71,9 @@ class Crawler {
 
   private extractUrls(html: string, baseUrl: string): string[] {
     const $ = cheerio.load(html);
-    const relativeUrls = $('a').map((_, link) => $(link).attr('href')).get() as string[];
+    const relativeUrls = $('a')
+      .map((_, link) => $(link).attr('href'))
+      .get() as string[];
     return relativeUrls.map(relativeUrl => new URL(relativeUrl, baseUrl).href);
   }
 }
