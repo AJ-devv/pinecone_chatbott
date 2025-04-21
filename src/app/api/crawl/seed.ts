@@ -24,25 +24,20 @@ async function seed(
 ) {
   try {
     const pinecone = new Pinecone();
-
     const { splittingMethod, chunkSize, chunkOverlap } = options;
-
     const crawler = new Crawler(1, limit || 100);
     const pages = await crawler.crawl(url) as Page[];
-
-    console.log("✅ Crawled pages:", pages.map(p => p.url));
 
     const splitter: DocumentSplitter =
       splittingMethod === 'recursive'
         ? new RecursiveCharacterTextSplitter({ chunkSize, chunkOverlap })
         : new MarkdownTextSplitter({});
 
-    const documents = await Promise.all(
-      pages.map(page => prepareDocument(page, splitter))
-    );
+    const documents = await Promise.all(pages.map(page => prepareDocument(page, splitter)));
 
     const indexList: string[] = (await pinecone.listIndexes())?.indexes?.map(index => index.name) || [];
     const indexExists = indexList.includes(indexName);
+
     if (!indexExists) {
       await pinecone.createIndex({
         name: indexName,
@@ -58,15 +53,12 @@ async function seed(
     }
 
     const index = pinecone.Index(indexName);
-
     const vectors = await Promise.all(documents.flat().map(embedDocument));
-    console.log("📦 Total vectors:", vectors.length);
-
-    await chunkedUpsert(index, vectors, '', 10);
+    await chunkedUpsert(index!, vectors, '', 10);
 
     return documents[0];
   } catch (error) {
-    console.error("❌ Error seeding:", error);
+    console.error("Error seeding:", error);
     throw error;
   }
 }
@@ -83,33 +75,37 @@ async function embedDocument(doc: Document): Promise<PineconeRecord> {
         chunk: doc.pageContent,
         text: doc.metadata.text as string,
         url: doc.metadata.url as string,
-        hash: doc.metadata.hash as string,
+        hash: doc.metadata.hash as string
       }
     } as PineconeRecord;
   } catch (error) {
-    console.error("❌ Error embedding document:", error);
+    console.log("Error embedding document: ", error);
     throw error;
   }
 }
 
 async function prepareDocument(page: Page, splitter: DocumentSplitter): Promise<Document[]> {
+  const pageContent = page.content;
+
   const docs = await splitter.splitDocuments([
     new Document({
-      pageContent: page.content,
+      pageContent,
       metadata: {
         url: page.url,
-        text: truncateStringByBytes(page.content, 36000),
-      },
-    }),
+        text: truncateStringByBytes(pageContent, 36000)
+      }
+    })
   ]);
 
-  return docs.map(doc => ({
-    pageContent: doc.pageContent,
-    metadata: {
-      ...doc.metadata,
-      hash: md5(doc.pageContent),
-    },
-  }));
+  return docs.map((doc: Document) => {
+    return {
+      pageContent: doc.pageContent,
+      metadata: {
+        ...doc.metadata,
+        hash: md5(doc.pageContent)
+      }
+    };
+  });
 }
 
 export default seed;
